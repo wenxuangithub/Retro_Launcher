@@ -15,9 +15,9 @@ class GameLauncherApp extends StatelessWidget {
       title: 'Retro Layout',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: Colors.black,
+        scaffoldBackgroundColor: Colors.transparent,
         textTheme: GoogleFonts.pressStart2pTextTheme()
-            .apply(bodyColor: Colors.greenAccent),
+            .apply(bodyColor: Colors.cyanAccent),
       ),
       home: GameLauncherHome(),
     );
@@ -40,6 +40,14 @@ class _GameLauncherHomeState extends State<GameLauncherHome>
     'Toxic Tetris 2',
   ];
 
+  // For chat
+  final List<String> chatMessages = [
+    "> User: Hello!",
+    "> Bot: Welcome to Retro Chat.",
+    "> User: Launch game."
+  ];
+  final TextEditingController _chatController = TextEditingController();
+
   Object? model;
   late Ticker _ticker;
   Scene? scene;
@@ -59,6 +67,7 @@ class _GameLauncherHomeState extends State<GameLauncherHome>
   @override
   void dispose() {
     _ticker.dispose();
+    _chatController.dispose();
     super.dispose();
   }
 
@@ -73,11 +82,48 @@ class _GameLauncherHomeState extends State<GameLauncherHome>
       child: child,
     );
   }
+  final ScrollController _chatScrollController = ScrollController();
+  final FocusNode _chatFocusNode = FocusNode();
+
+  void _sendMessage() {
+    String text = _chatController.text.trim();
+    if (text.isNotEmpty) {
+      setState(() {
+        chatMessages.add("> User: $text");
+        chatMessages.add("> Bot: [Echo] $text");
+      });
+      _chatController.clear();
+
+      // Auto-scroll to bottom
+      Future.delayed(Duration(milliseconds: 50), () {
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
+      });
+
+      // Re-focus so user can keep typing
+      Future.delayed(Duration(milliseconds: 100), () {
+        _chatFocusNode.requestFocus();
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1A0033), Color(0xFF330066), Color(0xFF660066)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+      Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // LEFT PANEL - SELECTION
@@ -120,34 +166,59 @@ class _GameLauncherHomeState extends State<GameLauncherHome>
             ),
           ),
 
-          // RIGHT PANEL - CHAT INTERFACE
+          // RIGHT PANEL - CHAT INTERFACE (Terminal Style)
           Expanded(
             child: retroBox(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("CHAT", style: TextStyle(fontSize: 10)),
-                  SizedBox(height: 10),
+                  Text("TERMINAL", style: TextStyle(fontSize: 10)),
+                  SizedBox(height: 5),
                   Expanded(
-                    child: ListView(
-                      children: [
-                        Text("> User: Hello!", style: TextStyle(fontSize: 10)),
-                        Text("> Bot: Welcome to Retro Chat.",
-                            style: TextStyle(fontSize: 10)),
-                        Text("> User: Launch game.", style: TextStyle(fontSize: 10)),
-                      ],
+                    child: Container(
+                      color: Colors.black,
+                      child: ListView.builder(
+                        controller: _chatScrollController,
+                        itemCount: chatMessages.length,
+                        itemBuilder: (context, index) {
+                          return Text(
+                            chatMessages[index],
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontFamily: 'monospace',
+                              color: Colors.greenAccent,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                  TextField(
-                    style: TextStyle(fontSize: 10, color: Colors.greenAccent),
-                    decoration: InputDecoration(
-                      hintText: 'Type message...',
-                      hintStyle: TextStyle(color: Colors.greenAccent.withOpacity(0.5)),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.greenAccent),
+                  Container(
+                    color: Colors.black,
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child:TextField(
+                      controller: _chatController,
+                      focusNode: _chatFocusNode,
+                      autofocus: true, // Focus immediately on app start
+                      onSubmitted: (_) => _sendMessage(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                        color: Colors.greenAccent,
                       ),
-                      isDense: true,
-                    ),
+                      cursorColor: Colors.greenAccent,
+                      decoration: InputDecoration(
+                        hintText: 'Type here...',
+                        hintStyle: TextStyle(
+                          color: Colors.greenAccent.withOpacity(0.4),
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    )
                   ),
                 ],
               ),
@@ -155,6 +226,8 @@ class _GameLauncherHomeState extends State<GameLauncherHome>
           ),
         ],
       ),
+        ],
+      )
     );
   }
 }
